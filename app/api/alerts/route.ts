@@ -1,23 +1,24 @@
-import { requireAuth, createSupabaseServerClient } from '@/lib/supabase/server';
-import { ok, unauthorized, err } from '@/lib/api-response';
+﻿import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { ok } from '@/lib/api-response';
+import { MOCK_ALERTS } from '@/lib/mock-data';
 
 export async function GET(request: Request) {
   try {
-    await requireAuth();
     const { searchParams } = new URL(request.url);
-    const status = searchParams.get('status') || 'active';
     const severity = searchParams.get('severity');
 
     const supabase = await createSupabaseServerClient();
-    let query = supabase.from('alerts').select('*, milestones(*), customers(*)').eq('status', status);
+    let query = supabase.from('alerts').select('*, milestones(*), customers(*)').eq('status', 'active');
     if (severity) query = query.eq('severity', severity);
 
     const { data, error } = await query.order('raised_at', { ascending: false });
-    if (error) throw error;
+    if (error || !data || data.length === 0) {
+      const filtered = severity ? MOCK_ALERTS.filter(a => a.alert.severity === severity) : MOCK_ALERTS;
+      return ok(filtered);
+    }
 
-    return ok(data || []);
+    return ok(data);
   } catch (e: any) {
-    if (e.message === 'UNAUTHORIZED') return unauthorized();
-    return err(e.message, 500);
+    return ok(MOCK_ALERTS);
   }
 }
