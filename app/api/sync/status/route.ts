@@ -4,11 +4,12 @@ import { ok, unauthorized, err } from '@/lib/api-response';
 export async function GET() {
   try {
     await requireAuth();
-    const supabase = createSupabaseServerClient();
+    const supabase = await createSupabaseServerClient();
+
     const { data, error } = await supabase.from('sync_status').select('*');
     if (error) throw error;
-    
-    return ok(data);
+
+    return ok({ sources: data || [] });
   } catch (e: any) {
     if (e.message === 'UNAUTHORIZED') return unauthorized();
     return err(e.message, 500);

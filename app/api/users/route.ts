@@ -12,10 +12,20 @@ export async function GET() {
   try {
     await requireCOO();
     const adminAuthClient = getAdminClient().auth.admin;
-    const { data: { users }, error } = await adminAuthClient.listUsers();
+    const { data, error } = await adminAuthClient.listUsers();
     if (error) throw error;
-    
-    return ok(users.map(u => ({ id: u.id, email: u.email, role: u.app_metadata?.role })));
+
+    const users = (data.users || []).map((u) => ({
+      id: u.id,
+      email: u.email || '',
+      name: u.user_metadata?.name || '',
+      role: u.app_metadata?.role || 'ceo',
+      mfa_enabled: false,
+      last_active_at: u.last_sign_in_at ? new Date(u.last_sign_in_at) : null,
+      push_subscribed: false
+    }));
+
+    return ok(users);
   } catch (e: any) {
     if (e.message === 'UNAUTHORIZED') return unauthorized();
     if (e.message === 'FORBIDDEN') return forbidden();
@@ -26,12 +36,15 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     await requireCOO();
-    const { email, role } = await request.json();
+    const { email, role, name } = await request.json();
     const adminAuthClient = getAdminClient().auth.admin;
-    
-    const { data, error } = await adminAuthClient.inviteUserByEmail(email, { data: { role } });
-    if (error) throw error;
 
+    const { data, error } = await adminAuthClient.inviteUserByEmail(email, {
+      data: { name },
+      redirectTo: `${process.env.NEXT_PUBLIC_APP_URL || ''}/login`
+    });
+
+    if (error) throw error;
     return ok(data);
   } catch (e: any) {
     if (e.message === 'UNAUTHORIZED') return unauthorized();

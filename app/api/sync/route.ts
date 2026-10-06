@@ -5,14 +5,12 @@ import { writeAuditLog } from '@/lib/audit';
 export async function POST() {
   try {
     const { user } = await requireCOO();
-    const supabase = createSupabaseServerClient();
-    
-    const jobId = crypto.randomUUID();
-    const startedAt = new Date().toISOString();
+    const supabase = await createSupabaseServerClient();
 
+    const jobId = `sync-${Date.now()}`;
     await writeAuditLog(supabase, user.id, user.email || '', 'manual_sync_triggered', 'sync', jobId);
 
-    return ok({ jobId, startedAt });
+    return ok({ jobId, startedAt: new Date().toISOString() });
   } catch (e: any) {
     if (e.message === 'UNAUTHORIZED') return unauthorized();
     if (e.message === 'FORBIDDEN') return forbidden();

@@ -4,8 +4,8 @@ import { cookies } from 'next/headers';
 export type UserRole = 'coo' | 'ceo';
 export interface User { id: string; email?: string; app_metadata: { role?: UserRole; [key: string]: any }; user_metadata: any }
 
-export function createSupabaseServerClient() {
-  const cookieStore = cookies();
+export async function createSupabaseServerClient() {
+  const cookieStore = await cookies();
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL || '',
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
@@ -24,7 +24,7 @@ export function createSupabaseServerClient() {
 }
 
 export async function requireAuth(): Promise<{ user: User; role: UserRole }> {
-  const supabase = createSupabaseServerClient();
+  const supabase = await createSupabaseServerClient();
   const { data: { user }, error } = await supabase.auth.getUser();
   if (error || !user) throw new Error('UNAUTHORIZED');
   const role = user.app_metadata?.role as UserRole || 'ceo';

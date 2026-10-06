@@ -1,28 +1,27 @@
 import { requireAuth, createSupabaseServerClient } from '@/lib/supabase/server';
 import { ok, unauthorized, err } from '@/lib/api-response';
-import { normalizePhone } from '@/lib/format';
 
 export async function GET(request: Request) {
   try {
     await requireAuth();
     const { searchParams } = new URL(request.url);
-    const q = searchParams.get('q');
-    const phone = searchParams.get('phone');
+    const q = searchParams.get('q') || '';
     const stage = searchParams.get('stage');
-    const limit = parseInt(searchParams.get('limit') || '50', 10);
-    const offset = parseInt(searchParams.get('offset') || '0', 10);
 
-    const supabase = createSupabaseServerClient();
-    let query = supabase.from('customers').select('*').limit(limit).range(offset, offset + limit - 1);
+    const supabase = await createSupabaseServerClient();
+    let query = supabase.from('customers').select('*');
 
-    if (q) query = query.ilike('name', `%${q}%`);
-    if (phone) query = query.eq('phone', normalizePhone(phone));
-    if (stage) query = query.eq('current_stage', stage);
+    if (q) {
+      query = query.or(`name.ilike.%${q}%,phone_normalised.ilike.%${q}%`);
+    }
+    if (stage) {
+      query = query.eq('current_stage', parseInt(stage, 10));
+    }
 
-    const { data, error } = await query;
+    const { data, error } = await query.order('updated_at', { ascending: false });
     if (error) throw error;
-    
-    return ok(data);
+
+    return ok(data || []);
   } catch (e: any) {
     if (e.message === 'UNAUTHORIZED') return unauthorized();
     return err(e.message, 500);

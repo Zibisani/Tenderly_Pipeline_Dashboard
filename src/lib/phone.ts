@@ -6,20 +6,24 @@ export function normalisePhone(raw: string | null | undefined): string | null {
   else if (digits.startsWith('267')) digits = digits.slice(3);
   else if (digits.startsWith('00')) digits = digits.slice(2);
   else if (digits.startsWith('0')) digits = digits.slice(1);
+
   if (digits.length === 8) return digits;
   return null;
 }
+
 export function phonesMatch(a: string | null, b: string | null): boolean {
   if (!a || !b) return false;
   const normA = normalisePhone(a);
   const normB = normalisePhone(b);
   return normA !== null && normB !== null && normA === normB;
 }
+
 export function formatPhoneDisplay(normalised: string): string {
-  if (normalised.length !== 8) return normalised;
-  return +267   ;
+  if (!normalised || normalised.length !== 8) return normalised || '';
+  return `+267 ${normalised.slice(0, 2)} ${normalised.slice(2, 5)} ${normalised.slice(5)}`;
 }
+
 export function buildWaLink(normalised: string, message: string): string {
   const encodedMessage = encodeURIComponent(message);
-  return https://wa.me/267?text=;
+  return `https://wa.me/267${normalised}?text=${encodedMessage}`;
 }

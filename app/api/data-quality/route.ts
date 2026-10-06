@@ -1,18 +1,15 @@
 import { requireCOO, createSupabaseServerClient } from '@/lib/supabase/server';
 import { ok, unauthorized, forbidden, err } from '@/lib/api-response';
 
-export async function GET(request: Request) {
+export async function GET() {
   try {
     await requireCOO();
-    const { searchParams } = new URL(request.url);
-    const limit = parseInt(searchParams.get('limit') || '50', 10);
-    const offset = parseInt(searchParams.get('offset') || '0', 10);
+    const supabase = await createSupabaseServerClient();
 
-    const supabase = createSupabaseServerClient();
-    const { data, error } = await supabase.from('data_quality_issues').select('*').eq('status', 'unresolved').limit(limit).range(offset, offset + limit - 1);
+    const { data, error } = await supabase.from('data_quality').select('*').eq('resolved', false).order('created_at', { ascending: false });
     if (error) throw error;
-    
-    return ok(data);
+
+    return ok(data || []);
   } catch (e: any) {
     if (e.message === 'UNAUTHORIZED') return unauthorized();
     if (e.message === 'FORBIDDEN') return forbidden();

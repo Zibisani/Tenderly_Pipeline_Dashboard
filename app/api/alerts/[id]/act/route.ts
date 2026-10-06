@@ -9,21 +9,22 @@ const ActionSchema = z.object({
   snoozedUntil: z.string().optional()
 });
 
-export async function POST(request: Request, { params }: { params: { id: string } }) {
+export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params;
     const { user } = await requireCOO();
     const body = await request.json();
     const parsed = ActionSchema.parse(body);
 
-    const supabase = createSupabaseServerClient();
+    const supabase = await createSupabaseServerClient();
     
     const updateData: any = { status: parsed.action, acted_by: user.id, acted_at: new Date().toISOString() };
     if (parsed.action === 'snooze' && parsed.snoozedUntil) updateData.snoozed_until = parsed.snoozedUntil;
 
-    const { data, error } = await supabase.from('alerts').update(updateData).eq('id', params.id).select().single();
+    const { data, error } = await supabase.from('alerts').update(updateData).eq('id', id).select().single();
     if (error) throw error;
 
-    await writeAuditLog(supabase, user.id, user.email || '', 'alert_acted', 'alerts', params.id, parsed);
+    await writeAuditLog(supabase, user.id, user.email || '', 'alert_acted', 'alerts', id, parsed);
 
     return ok(data);
   } catch (e: any) {
